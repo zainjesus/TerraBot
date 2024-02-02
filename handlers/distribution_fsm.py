@@ -23,25 +23,30 @@ async def send_message(message: Message, state: FSMContext):
 async def message_save(message: Message, state: FSMContext):
     if message.text:
         await state.update_data(message=message.text)
-        await bot.send_message(message.from_user.id, 'Если хотите прикрепить к сообщению фотографию, отправьте ее мне\n'
-                                                     '(только одно фото)',
+        await bot.send_message(message.from_user.id, 'Если хотите прикрепить к сообщению фотографию/видео, отправьте'
+                                                     ' ее мне\n(только одно фото/видео)',
                                                      reply_markup=distribution_photo)
-        await state.set_state(Distribution.photo)
+        await state.set_state(Distribution.photo_or_video)
     else:
         await bot.send_message(message.from_user.id, "На этом этапе можно только ввести текст!")
 
 
-@router.message(Distribution.photo)
+@router.message(Distribution.photo_or_video)
 async def photo_save(message: Message, state: FSMContext):
     if message.text == "Оставить без фото":
         await state.set_state(Distribution.submit)
         await bot.send_message(message.from_user.id, 'Чтобы разослать это сообщение, нажмите "ДАЛЕЕ"',
                                reply_markup=distribution_submit)
     elif message.photo:
-            await state.update_data(photo=message.photo[-1].file_id)
-            await bot.send_message(message.from_user.id, 'Чтобы разослать это сообщение, нажмите "ДАЛЕЕ"',
-                                   reply_markup=distribution_submit)
-            await state.set_state(Distribution.submit)
+        await state.update_data(photo_or_video=message.photo[-1].file_id)
+        await bot.send_message(message.from_user.id, 'Чтобы разослать это сообщение, нажмите "ДАЛЕЕ"',
+                               reply_markup=distribution_submit)
+        await state.set_state(Distribution.submit)
+    elif message.video:
+        await state.update_data(photo_or_video=message.video.file_id)
+        await bot.send_message(message.from_user.id, 'Чтобы разослать это сообщение, нажмите "ДАЛЕЕ"',
+                               reply_markup=distribution_submit)
+        await state.set_state(Distribution.submit)
     else:
         await bot.send_message(message.from_user.id, "На этом этапе можно только прикрепить фото!")
 
@@ -51,13 +56,16 @@ async def submit(message: Message, state: FSMContext):
     if message.text == "ДАЛЕЕ":
         data = await state.get_data()
         user_message = data.get('message')
-        user_photo = data.get('photo')
+        user_photo_or_video = data.get('photo_or_video')
         GROUP = await group()
         await bot.send_message(message.from_user.id, "Сообщение успешно разослано!", reply_markup=admin_kb)
         await state.clear()
         for i in GROUP:
-            if user_photo:
-                await bot.send_photo(i, photo=user_photo, caption=user_message)
+            if user_photo_or_video:
+                try:
+                    await bot.send_photo(i, photo=user_photo_or_video, caption=user_message)
+                except:
+                    await bot.send_video(i, video=user_photo_or_video, caption=user_message)
             else:
                 await bot.send_message(i, user_message)
     elif message.text == "ОТМЕНИТЬ":
