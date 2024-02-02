@@ -62,6 +62,7 @@ async def submit(message: Message, state: FSMContext):
         await state.clear()
         for i in GROUP:
             if user_photo_or_video:
+                # проверка на фото или видео
                 try:
                     await bot.send_photo(i, photo=user_photo_or_video, caption=user_message)
                 except:
