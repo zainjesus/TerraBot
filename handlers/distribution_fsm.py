@@ -24,7 +24,7 @@ async def message_save(message: Message, state: FSMContext):
     if message.text:
         await state.update_data(message=message.text)
         await bot.send_message(message.from_user.id, 'Если хотите прикрепить к сообщению фотографию/видео, отправьте'
-                                                     ' ее мне\n(только одно фото/видео)',
+                                                     ' ее/его мне\n(только одно фото/видео)',
                                                      reply_markup=distribution_photo)
         await state.set_state(Distribution.photo_or_video)
     else:
